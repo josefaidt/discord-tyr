@@ -1,0 +1,33 @@
+{
+  "name": "discord-tyr",
+  "version": "0.0.1",
+  "type": "module",
+  "description": "Discord bot for assigning unique roles for private text channels",
+  "main": "bot.js",
+  "repository": "https://github.com/josefaidt/discord-tyr",
+  "author": "josef",
+  "license": "MIT",
+  "scripts": {
+    "start": "yarn start:dev",
+    "start:prod": "node --experimental-modules -r dotenv/config src/app.js dotenv_config_path=.env",
+    "start:dev": "node --experimental-modules -r dotenv/config src/app.js dotenv_config_path=.env.dev"
+  },
+  "dependencies": {
+    "discord.js": "^11.5.1",
+    "dotenv": "^8.0.0"
+  },
+  "devDependencies": {
+    "@josefaidt/eslint-config": "^0.1.8",
+    "eslint": "^6.0.1",
+    "husky": "^2.7.0",
+    "lint-staged": "^8.2.1"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "*.js": "eslint --config .config/eslint.config.js"
+  }
+}
