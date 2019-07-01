@@ -1,5 +1,6 @@
 import Discord from 'discord.js'
 import lg from '@josefaidt/lg'
+import Permissions from './permissions.js'
 const client = new Discord.Client()
 
 client.on('ready', () => {
@@ -22,6 +23,9 @@ client.on('message', msg => {
 //    create a role private to the new channel
 //    have role template permissions
 //    cleanup role after removing
+//    set role position to top
+//    add admin role
+//    IF channel *DOES* exist, do not recreate, but reset permissions
 // future:
 //    create page to "start" and "stop" demo
 //      this will delete and remove the role/channel
@@ -30,51 +34,40 @@ client.on('message', msg => {
 //      or maybe just a cleanup command
 //      or not
 
-const defaultUserPermissions = {
-  MANAGE_MESSAGES: true,
-  SEND_MESSAGES: true,
-  READ_MESSAGES: true,
-  MANAGE_WEBHOOKS: true,
-  ADD_REACTIONS: true,
-  EMBED_LINKS: true,
-  ATTACH_FILES: true,
-  READ_MESSAGE_HISTORY: true,
-  CHANGE_NICKNAME: true,
-}
-
-const denyUserPermissions = {
-  ADMINISTRATOR: false,
-  CREATE_INSTANT_INVITE: false,
-  KICK_MEMBERS: false,
-  BAN_MEMBERS: false,
-  MANAGE_CHANNELS: false,
-  MANAGE_GUILD: false,
-  VIEW_AUDIT_LOG: false,
-  PRIORITY_SPEAKER: false,
-  VIEW_CHANNEL: false,
-  SEND_TTS_MESSAGES: false,
-  MENTION_EVERYONE: false,
-  USE_EXTERNAL_EMOJIS: false,
-  MANAGE_NICKNAMES: false,
-  MANAGE_ROLES: false,
-  MANAGE_EMOJIS: false,
-}
-
-const createChannel = async (guild, channelName) => {
+const createChannel = async ({ guild, user, channelName }) => {
   await guild.createChannel(channelName, {
     type: 'text',
   })
 }
 
-const setUserPermissions = (user, channel) => {
-  // Overwrite permissions for a message author
-  channel
-    .overwritePermissions(user, {
-      ...defaultUserPermissions,
-      ...denyUserPermissions,
-    })
-    .then(updated => console.log(updated.permissionOverwrites.get(user.id)))
-    .catch(console.error)
+const setUserPermissions = ({ user, channel }) => {
+  const roles = [
+    {
+      user: channel.guild.members.get(client.user.id),
+      permissions: Permissions.client,
+    },
+    {
+      user,
+      permissions: Permissions.user,
+    },
+    {
+      user: channel.guild.defaultRole,
+      permissions: Permissions.everyone,
+    },
+  ]
+  roles.forEach(async r => {
+    lg(`Setting permissions for ${r.user.displayName || r.user.name || r.user.username}`)
+    await channel
+      .overwritePermissions(r.user, r.permissions)
+      .then(
+        lg(
+          `Done! Set permissions on ${channel.name} for ${r.user.displayName ||
+            r.user.name ||
+            r.user.username}`
+        )
+      )
+      .catch(console.error)
+  })
 }
 
 client.on('guildMemberUpdate', (oldMember, newMember) => {
@@ -89,11 +82,19 @@ client.on('guildMemberUpdate', (oldMember, newMember) => {
       ][0]
       lg(newRole.name)
       const channelName = `${user.displayName}-${newRole.name}`
-      createChannel(user.guild, channelName)
+      createChannel({
+        guild: user.guild,
+        user,
+        channelName,
+      })
         .then(lg(`Successfully created channel ${channelName}`))
         .then(() => {
           const [c] = [...user.guild.channels.values()].filter(({ name }) => name === channelName)
-          setUserPermissions(user, c)
+          setUserPermissions({
+            user,
+            channel: c,
+          })
+          // lg('Set permissions successfully!')
         })
         .catch(console.error)
     } else {
@@ -102,7 +103,7 @@ client.on('guildMemberUpdate', (oldMember, newMember) => {
       ][0]
       const channelName = `${user.displayName}-${removedRole.name}`
       // check if channel exists
-      if ([...user.guild.channels.values()].filter(({ name }) => name === channelName)) {
+      if ([...user.guild.channels.values()].filter(({ name }) => name === channelName).length > 0) {
         const channels = [...user.guild.channels.values()].filter(
           ({ name }) => name === channelName
         )
