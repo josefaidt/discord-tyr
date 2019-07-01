@@ -11,17 +11,7 @@ client.on('ready', () => {
     .catch(console.error)
 })
 
-client.on('message', msg => {
-  if (msg.content === 'ping') {
-    msg.reply('pong')
-  }
-
-  lg('GUILD', msg.guild)
-})
-
 // todo:
-//    create a role private to the new channel
-//    have role template permissions
 //    cleanup role after removing
 //    set role position to top
 //    add admin role
@@ -33,6 +23,22 @@ client.on('message', msg => {
 //      on startup, check to see if any existing channels should be removed
 //      or maybe just a cleanup command
 //      or not
+
+const createCategory = async ({ guild, categoryName }) => {
+  await guild.createChannel(categoryName, {
+    type: 'category',
+    permissionOverwrites: [
+      {
+        id: guild.ownerID,
+        allow: ['ADMINISTRATOR'],
+      },
+      {
+        id: client.user.id,
+        allow: ['MANAGE_ROLES', 'MANAGE_MESSAGES', 'MANAGE_CHANNELS'],
+      },
+    ],
+  })
+}
 
 const createChannel = async ({ guild, user, channelName }) => {
   await guild.createChannel(channelName, {
@@ -124,6 +130,26 @@ client.on('guildMemberUpdate', (oldMember, newMember) => {
       } else {
         lg(`NO CHANNEL EXISTS FOR ${channelName}, SKIPPING...`)
       }
+    }
+  }
+})
+
+client.on('message', msg => {
+  if (msg.content === 'ping') {
+    msg.reply('pong')
+  }
+  if (msg.content.slice(0, 1) === process.env.CMD_PREFIX) {
+    const content = msg.content.slice(1, msg.content.length)
+    switch (content.split(' ')[0]) {
+      case 'test':
+        msg.reply('you have my attention')
+        break
+      case 'start':
+        msg.reply('Starting your private room')
+        console.log(msg.member.guild.members.get(msg.author.id).roles.find('name', ''))
+        break
+      default:
+        msg.reply('Please enter a valid command')
     }
   }
 })
