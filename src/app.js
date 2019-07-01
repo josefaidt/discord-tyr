@@ -1,24 +1,21 @@
 import Discord from 'discord.js'
+import lg from '@josefaidt/lg'
 const client = new Discord.Client()
 
 client.on('ready', () => {
-  console.log(`Logged in as ${client.user.tag}!`)
+  lg(`Logged in as ${client.user.tag}!`)
   client.user
     .setStatus('Hello')
-    // .then(console.log)
+    // .then(lg)
     .catch(console.error)
 })
-
-const permissions = 537258048
-
-console.log(client.guilds)
 
 client.on('message', msg => {
   if (msg.content === 'ping') {
     msg.reply('pong')
   }
 
-  console.log('GUILD', msg.guild)
+  lg('GUILD', msg.guild)
 })
 
 // todo:
@@ -33,35 +30,35 @@ client.on('message', msg => {
 //      or maybe just a cleanup command
 //      or not
 
-const defaultPermissions = [
-  'MANAGE_MESSAGES',
-  'SEND_MESSAGES',
-  'READ_MESSAGES',
-  'MANAGE_WEBHOOKS',
-  'ADD_REACTIONS',
-  'EMBED_LINKS',
-  'ATTACH_FILES',
-  'READ_MESSAGE_HISTORY',
-  'CHANGE_NICKNAME',
-]
+const defaultUserPermissions = {
+  MANAGE_MESSAGES: true,
+  SEND_MESSAGES: true,
+  READ_MESSAGES: true,
+  MANAGE_WEBHOOKS: true,
+  ADD_REACTIONS: true,
+  EMBED_LINKS: true,
+  ATTACH_FILES: true,
+  READ_MESSAGE_HISTORY: true,
+  CHANGE_NICKNAME: true,
+}
 
-const denyPermissions = [
-  'ADMINISTRATOR',
-  'CREATE_INSTANT_INVITE',
-  'KICK_MEMBERS',
-  'BAN_MEMBERS',
-  'MANAGE_CHANNELS',
-  'MANAGE_GUILD',
-  'VIEW_AUDIT_LOG',
-  'PRIORITY_SPEAKER',
-  'VIEW_CHANNEL',
-  'SEND_TTS_MESSAGES',
-  'MENTION_EVERYONE',
-  'USE_EXTERNAL_EMOJIS',
-  'MANAGE_NICKNAMES',
-  'MANAGE_ROLES',
-  'MANAGE_EMOJIS',
-]
+const denyUserPermissions = {
+  ADMINISTRATOR: false,
+  CREATE_INSTANT_INVITE: false,
+  KICK_MEMBERS: false,
+  BAN_MEMBERS: false,
+  MANAGE_CHANNELS: false,
+  MANAGE_GUILD: false,
+  VIEW_AUDIT_LOG: false,
+  PRIORITY_SPEAKER: false,
+  VIEW_CHANNEL: false,
+  SEND_TTS_MESSAGES: false,
+  MENTION_EVERYONE: false,
+  USE_EXTERNAL_EMOJIS: false,
+  MANAGE_NICKNAMES: false,
+  MANAGE_ROLES: false,
+  MANAGE_EMOJIS: false,
+}
 
 const createChannel = async (guild, channelName) => {
   await guild.createChannel(channelName, {
@@ -69,46 +66,62 @@ const createChannel = async (guild, channelName) => {
   })
 }
 
-const difference = (collection1, collection2) => {}
+const setUserPermissions = (user, channel) => {
+  // Overwrite permissions for a message author
+  channel
+    .overwritePermissions(user, {
+      ...defaultUserPermissions,
+      ...denyUserPermissions,
+    })
+    .then(updated => console.log(updated.permissionOverwrites.get(user.id)))
+    .catch(console.error)
+}
 
 client.on('guildMemberUpdate', (oldMember, newMember) => {
   const hasRoleChanged = !oldMember.roles.equals(newMember.roles)
   const user = newMember
-  // console.log(user)
+  // lg(user)
   if (hasRoleChanged) {
     const isNewRole = [...oldMember.roles.values()].length < [...newMember.roles.values()].length
     if (isNewRole) {
       const newRole = [
         ...newMember.roles.filter(r => ![...oldMember.roles.values()].includes(r)).values(),
       ][0]
-      console.log(newRole.name)
+      lg(newRole.name)
       const channelName = `${user.displayName}-${newRole.name}`
       createChannel(user.guild, channelName)
-        .then(console.log(`Successfully created channel ${channelName}`))
+        .then(lg(`Successfully created channel ${channelName}`))
+        .then(() => {
+          const [c] = [...user.guild.channels.values()].filter(({ name }) => name === channelName)
+          setUserPermissions(user, c)
+        })
         .catch(console.error)
     } else {
       const removedRole = [
         ...oldMember.roles.filter(r => ![...newMember.roles.values()].includes(r)).values(),
       ][0]
       const channelName = `${user.displayName}-${removedRole.name}`
-      console.log([...user.guild.channels.values()])
       // check if channel exists
       if ([...user.guild.channels.values()].filter(({ name }) => name === channelName)) {
-        const channel = [...user.guild.channels.values()].filter(({ name }) => name === channelName)
-        if (channel.length > 1) {
-          console.log(`multiple channels, ${channelName} detected!`)
-          for (const c in channel) {
-            channel[c].delete()
-            console.log(`deleted channel ${channel[c].name}`)
+        const channels = [...user.guild.channels.values()].filter(
+          ({ name }) => name === channelName
+        )
+        if (channels.length > 1) {
+          lg(`multiple channels, ${channelName} detected!`)
+          for (const c in channels) {
+            channels[c]
+              .delete()
+              .then(lg(`Deleted channel ${channels[c].name} - ${channels[c].id}`))
+              .catch(console.error)
           }
         } else {
-          channel[0]
+          channels[0]
             .delete()
-            .then(console.log(`Deleted channel ${channel[0].name}`))
+            .then(lg(`Deleted channel ${channels[0].name}`))
             .catch(console.error)
         }
       } else {
-        console.log(`NO CHANNEL EXISTS FOR ${channelName}, SKIPPING...`)
+        lg(`NO CHANNEL EXISTS FOR ${channelName}, SKIPPING...`)
       }
     }
   }

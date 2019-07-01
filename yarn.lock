@@ -115,6 +115,13 @@
     eslint-plugin-standard "^4.0.0"
     prettier "^1.18.2"
 
+"@josefaidt/lg@^0.1.2":
+  version "0.1.2"
+  resolved "https://registry.yarnpkg.com/@josefaidt/lg/-/lg-0.1.2.tgz#99a408219521501cea9c9a1655441bc4bbdc10da"
+  integrity sha512-/4lKV14c0GJ01lMnKGr8x6Oyr2bRfYGDXwcQySjQdXMYhOV6n0SUcEjblydiskTxGbA2ZCYvhU1pACMP8SqLhA==
+  dependencies:
+    chalk "^2.4.2"
+
 "@samverschueren/stream-to-observable@^0.3.0":
   version "0.3.0"
   resolved "https://registry.yarnpkg.com/@samverschueren/stream-to-observable/-/stream-to-observable-0.3.0.tgz#ecdf48d532c58ea477acfcab80348424f8d0662f"
